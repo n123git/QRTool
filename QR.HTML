@@ -65,6 +65,7 @@
 <script>
 class QRGenerator {
   static B32TABLE = 'GN5BH8QJSAC0MFR6P4VET1O7K9U2LD3I';
+  static IN_TABLE = '0123456789abcdefghijklmnopqrstuv';
 
   get typeLen() { throw new Error('typeLen not implemented'); }
   get varLen()  { throw new Error('varLen not implemented'); }
@@ -75,7 +76,7 @@ class QRGenerator {
     const words = wa.words;
     const u8 = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
-      u8[i] = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+      /* tool by n123original on discord :3 */ u8[i] = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
     }
     return u8;
   }
@@ -91,17 +92,35 @@ class QRGenerator {
   }
 
   static modB32Encode(bytes) {
+    // Build hex string
     const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    const bits = [];
-    for (const ch of hex) {
-      const val = parseInt(ch, 16);
-      for (let i = 3; i >= 0; i--) bits.push((val >> i) & 1);
-    }
+    // Map hex chars to 0-15 values using IN_TABLE
+    const inBuf = Array.from(hex).map(ch => {
+      const idx = QRGenerator.IN_TABLE.indexOf(ch.toLowerCase());
+      if (idx < 0) throw new Error(`Invalid hex char: ${ch}`);
+      return idx;
+    });
+
     const out = [];
-    for (let i = 0; i < bits.length; i += 5) {
-      let chunk = 0;
-      for (let j = 0; j < 5; j++) chunk = (chunk << 1) | (bits[i + j] || 0);
-      out.push(QRGenerator.B32TABLE[chunk]);
+    let bitPos = 0, bufPos = 0;
+    const OUT_BIT = 5, IN_BIT = 4;
+
+    while (bufPos < inBuf.length) {
+      let a = inBuf[bufPos] << (32 - IN_BIT);
+      if (bufPos + 1 < inBuf.length) {
+        a |= inBuf[bufPos + 1] << (32 - 2 * IN_BIT);
+      }
+      a >>>= (32 - OUT_BIT - bitPos);
+      a &= (1 << OUT_BIT) - 1;
+      if (bufPos + 1 >= inBuf.length) {
+        a >>>= 2;
+      }
+      out.push(QRGenerator.B32TABLE[a]);
+      bitPos += OUT_BIT;
+      while (bitPos >= IN_BIT) {
+        bitPos -= IN_BIT;
+        bufPos++;
+      }
     }
     return out.join('');
   }
@@ -138,9 +157,9 @@ class V2QRGenerator extends QRGenerator {
 
 function* variationGenerator() {
   const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  for (let i = 0; i < Math.pow(chars.length, 4); i++) {
-    let v = i.toString(chars.length).toUpperCase().padStart(4, "0");
-    yield v.replace(/0/g, chars[0]);
+  const base = chars.length;
+  for (let i = 0; i < Math.pow(base, 4); i++) {
+    yield i.toString(base).toUpperCase().padStart(4, "0");
   }
 }
 
@@ -171,7 +190,6 @@ function generate() {
     const qrContainer = document.createElement("div");
     wrapper.appendChild(qrContainer);
 
-    // Generate QR code image - btw this tool is from @n123original on discord
     new QRCode(qrContainer, {
       text: qrString,
       width: 128,
