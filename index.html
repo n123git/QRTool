@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>V2 QR Generator</title>
+<title>V1/V2 QR Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -13,24 +13,29 @@
     display: flex; flex-direction: column;
     gap: 1rem;
   }
+
   label { font-weight: bold; display: block; margin-bottom: 0.3rem; }
+
   input, button {
     font-size: 1rem;
     padding: 0.5rem;
     width: 100%;
     box-sizing: border-box;
   }
+
   button {
     background: #007bff; color: white; border: none;
     border-radius: 0.5rem;
     font-weight: bold;
   }
+
   .results {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
   }
+
   .qr-item {
     display: flex;
     flex-direction: column;
@@ -40,44 +45,97 @@
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
+
   .qr-text {
     font-size: 0.75rem;
     word-break: break-all;
     margin-top: 0.3rem;
     text-align: center;
   }
+
+  input[type="checkbox"] {
+    width: auto !important; /* thou shalt not expand */
+    margin: 0;
+  }
+
+  .container-panel { /* I'm totally not trying to raise the amount of useless comments for no reason */
+    max-width: 250px; /* feels like thats a good enough size */
+    width: auto;
+    padding: 1rem; /* inner padding so it dosen't look UGLY */
+    border: 1px solid #ccc; /* a panel border so it dosen't look UGLY lol */
+    border-radius: 0.5rem; /* optional rounded corners because CSS made cards my favourite shape (or atleast top 5) */
+    background: #f9f9f9; /* I need a fitting background color lol */
+    display: flex; /* flex layout so it's not cramped af, aka - UGLY :p */
+    flex-direction: column; /* vertical stacking */
+    gap: 1rem; /* again we need SOME spacing between stuff lol */
+  }
 </style>
 </head>
 <body>
 
-<h2>V2 QR Generator</h2>
+<h2>V1/V2 QR Generator</h2>
+<div class="container-panel">
+  <label for="type">V1/V2 Type (2/3 chars)</label>
+  <input id="type" maxlength="3" placeholder="Enter type e.g. ABC/12">
+  
+  <label for="amount">Number of QRs</label>
+  <input id="amount" type="number" min="1" value="5">
 
-<label for="type">V2 Type (3 chars)</label>
-<input id="type" maxlength="3" placeholder="Enter type e.g. ABC">
+  <label for="ver">Generate V2 QRs<span style="width: 10px;"></span>
+    <input id="ver" type="checkbox" style="margin-left: 10px;" checked>
+  </label>
 
-<label for="amount">Number of QRs</label>
-<input id="amount" type="number" min="1" value="5">
-
-<button onclick="generate()">Generate</button>
+  <button id="genBtn">Generate</button>
+  <footer id="notice"></footer>
+</div>
 
 <div id="results" class="results"></div>
 
 <script>
-class QRGenerator {
+// all of the below code is a lib I made namespaced under level5.qr heres the description ig
+/* level5.qr
+ * Description ig lol: Generates V1 & V2 QR Codes used by Level5 in the Yo-kai Watch series
+ * Dependencies: CryptoJS, QRCode.js
+ * Uhmm don't know what else to put
+ * Exists: yes
+ * oh yeah also:
+ * Author: n123git/n123original
+ * License: MIT
+*/
+const $ = id => document.getElementById(id);
+if(typeof level5 == 'undefined') level5 = {};
+if(typeof level5.qr == 'undefined') level5.qr = {};
+if(typeof level5.qr.ui == 'undefined') level5.qr.ui = {};
+
+// now enforce ze dependencies
+if (typeof CryptoJS === "undefined") {
+  alert("CryptoJS is not loaded! Please include crypto-js in order for level5.qr to function.");
+  throw new ReferenceError("CryptoJS is not loaded! Please include crypto-js in order for level5.qr to function.");
+}
+
+if (typeof QRCode === "undefined") {
+  alert("QRCode.js is not loaded! Please include qrcode.min.js in order for level5.qr to function.");
+  throw new ReferenceError("QRCode.js is not loaded! Please include qrcode.min.js in order for level5.qr to function.");
+}
+
+level5.qr.QRGenerator = class {
   static B32TABLE = 'GN5BH8QJSAC0MFR6P4VET1O7K9U2LD3I';
   static IN_TABLE = '0123456789abcdefghijklmnopqrstuv';
+  static chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  get typeLen() { throw new ReferenceError('Error: typeLen not implemented'); } // V2QRGenerator and V1QRGenerator extend the class to implement these methods
+  get varLen()  { throw new ReferenceError('Error: varLen not implemented'); }
+  get keys()    { throw new ReferenceError('Error: keys not implemented'); }
 
-  get typeLen() { throw new Error('typeLen not implemented'); }
-  get varLen()  { throw new Error('varLen not implemented'); }
-  get keys()    { throw new Error('keys not implemented'); }
+  static* variationGenerator() { // generator functions my (rarely used) beloved
+    const base = level5.qr.QRGenerator.chars.length;
+    for (let i = 0; i < Math.pow(base, 4); i++) yield i.toString(base).toUpperCase().padStart(4, "0");
+  }
 
   static wordArrayToU8(wa) {
     const len = wa.sigBytes;
     const words = wa.words;
     const u8 = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      /* tool by n123original on discord :3 */ u8[i] = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
-    }
+    for (let i = 0; i < len; i++) /* tool by n123original on discord :3 */ u8[i] = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
     return u8;
   }
 
@@ -91,121 +149,113 @@ class QRGenerator {
     return CryptoJS.lib.WordArray.create(words, u8arr.length);
   }
 
-  static modB32Encode(bytes) {
-    // Build hex string
-    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    // Map hex chars to 0-15 values using IN_TABLE
-    const inBuf = Array.from(hex).map(ch => {
-      const idx = QRGenerator.IN_TABLE.indexOf(ch.toLowerCase());
-      if (idx < 0) throw new Error(`Invalid hex char: ${ch}`);
+  static modB32Encode(bytes) { // convert bytes -> a weird, proprietary? B32 string
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(''); // Build hex string
+    const inBuf = Array.from(hex).map(ch => { // Map hex chars to 0-15 (16) values using IN_TABLE
+      const idx = level5.qr.QRGenerator.IN_TABLE.indexOf(ch.toLowerCase());
+      if (idx < 0) throw new EvalError(`Invalid hex char: ${ch}`);
       return idx;
     });
 
     const out = [];
-    let bitPos = 0, bufPos = 0;
-    const OUT_BIT = 5, IN_BIT = 4;
+    let bitPos = 0, bufPos = 0; // bitPos is a ptr holding the current bit offset in a 5-bit window and bufPos is a ptr (index) into inBuf
+    const OUT_BIT = 5, IN_BIT = 4; // 4-bit input values -> 5-bit output values
 
     while (bufPos < inBuf.length) {
-      let a = inBuf[bufPos] << (32 - IN_BIT);
-      if (bufPos + 1 < inBuf.length) {
-        a |= inBuf[bufPos + 1] << (32 - 2 * IN_BIT);
-      }
-      a >>>= (32 - OUT_BIT - bitPos);
-      a &= (1 << OUT_BIT) - 1;
-      if (bufPos + 1 >= inBuf.length) {
-        a >>>= 2;
-      }
-      out.push(QRGenerator.B32TABLE[a]);
-      bitPos += OUT_BIT;
-      while (bitPos >= IN_BIT) {
-        bitPos -= IN_BIT;
-        bufPos++;
-      }
+      let a = inBuf[bufPos] << (32 - IN_BIT); // Take the current 4-bit value and shift it to the high end of a 32-bit int
+      if (bufPos + 1 < inBuf.length) a |= inBuf[bufPos + 1] << (32 - 2 * IN_BIT);  // If there's a next 4-bit value, append it to the current 32-bit block
+      a >>>= (32 - OUT_BIT - bitPos); // Shift right to extract the next 5-bit group - which we will refer to as a cluster from now on
+      a &= (1 << OUT_BIT) - 1; // mask it since we only want to keep the next cluster
+      if (bufPos + 1 >= inBuf.length) a >>>= 2; // pad for the last 4-bit input value
+      out.push(level5.qr.QRGenerator.B32TABLE[a]); // Map the cluster to a character in the Base32 table
+      bitPos += OUT_BIT; // advance ze ptr
+      while (bitPos >= IN_BIT) bitPos -= IN_BIT, bufPos++; // If we have consumed 4-bit input(s), move to the next byte(s)
     }
-    return out.join('');
+    return out.join(''); // return as one string
   }
 
   calcHash(codeU8) {
-    let codeWA = QRGenerator.u8ToWordArray(codeU8);
+    let codeWA = level5.qr.QRGenerator.u8ToWordArray(codeU8);
     let lastDigestBytes;
     for (const key of this.keys) {
       const keyWA = CryptoJS.enc.Latin1.parse(key);
       const hmacWA = CryptoJS.HmacMD5(codeWA, keyWA);
-      lastDigestBytes = QRGenerator.wordArrayToU8(hmacWA);
+      lastDigestBytes = level5.qr.QRGenerator.wordArrayToU8(hmacWA);
       const hex = hmacWA.toString(CryptoJS.enc.Hex).toLowerCase();
       codeWA = CryptoJS.enc.Latin1.parse(hex);
     }
-    return QRGenerator.modB32Encode(lastDigestBytes);
+    return level5.qr.QRGenerator.modB32Encode(lastDigestBytes);
   }
 
   gen(pattern) {
-    if (pattern.length !== this.typeLen + this.varLen)
-      throw new Error(`Pattern must be ${this.typeLen + this.varLen} characters`);
-    if (!/^[0-9A-Za-z]+$/.test(pattern))
-      throw new Error('Pattern must be alphanumeric');
+    if (pattern.length !== this.typeLen + this.varLen) throw new Error(`Pattern must be exactly ${this.typeLen + this.varLen} characters long :/`);
+    if (!/^[0-9A-Za-z]+$/.test(pattern)) throw new Error('Pattern must be B36!');
     const up = pattern.toUpperCase();
-    const codeU8 = new TextEncoder().encode(up);
-    return up + this.calcHash(codeU8);
+    return up + this.calcHash(new TextEncoder().encode(up));
   }
 }
 
-class V2QRGenerator extends QRGenerator {
-  get typeLen() { return 3; }
+level5.qr.V2QRGenerator = class extends level5.qr.QRGenerator {
+  get typeLen() { return 3; } // yes I added spaces so the braces line up - I dont usually use that style of code but this time it looked too good to resist
   get varLen()  { return 4; }
   get keys()    { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
 }
 
-function* variationGenerator() {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const base = chars.length;
-  for (let i = 0; i < Math.pow(base, 4); i++) {
-    yield i.toString(base).toUpperCase().padStart(4, "0");
-  }
-}
+level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
+  get typeLen() { return 2; }
+  get varLen()  { return 4; }
+  /* this is so stupid - when I originally found V2 codes in the binary I didn't find V1 because these didn't look like keys to me - I tried everything different alphabets, layouts etc
+   * months later I came back to this and realised it - the issue here is V2 keys are secure, high entropy ASCII - these are literally random bs a level5 dev wrote which you could easily guess - it's like making your password "password" lmfao
+   * Level5 - what are you on :p */
+  get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
+} 
 
-function generate() {
-  const type = document.getElementById("type").value.trim().toUpperCase();
-  const amount = parseInt(document.getElementById("amount").value, 10);
-  const resultsDiv = document.getElementById("results");
+level5.qr.ui.generate = async function() {
+  const ver = $("ver").checked;
+  const type = $("type").value.trim().toUpperCase();
+  const amount = parseInt($("amount").value, 10);
+  const resultsDiv = $("results");
   resultsDiv.innerHTML = "";
-  if (type.length !== 3) {
-    alert("Type must be exactly 3 characters");
+  const gen = ver ? new level5.qr.V2QRGenerator() : new level5.qr.V1QRGenerator();
+  const verString = ver ? "V2" : "V1";
+  if (type.length !== gen.typeLen) {
+    alert(`Type must be exactly ${gen.typeLen} characters for ${verString} QR Codes.`);
     return;
   }
   if (amount < 1) {
-    alert("Amount must be >= 1");
+    alert("Amount must be >= 1 - you can't expect my code to generate 0 or even negative QR Codes :3");
     return;
   }
 
-  const gen = new V2QRGenerator();
-  const variations = variationGenerator();
+  const variations = level5.qr.QRGenerator.variationGenerator();
   let count = 0;
-  while (count < amount) {
-    const { value, done } = variations.next();
-    if (done) break;
-    const qrString = "/" + gen.gen(type + value);
-    const wrapper = document.createElement("div");
-    wrapper.className = "qr-item";
+  $("notice").innerText = `Generating ${amount} ${verString} QR Codes...`;
+  async function generateChunked() {
+    const chunkSize = 10;
+    while (count < amount) {
+      for (let i = 0; i < chunkSize && count < amount; i++) {
+        const { value, done } = variations.next();
+        if (done) break;
+        const qrString = "/" + gen.gen(type + value); // the forwardslash is required for them to be scannable - level5 places HTTP websites behind them but anything works aslong as there is a leading slash
+        const wrapper = document.createElement("div");
+        wrapper.className = "qr-item";
 
-    const qrContainer = document.createElement("div");
-    wrapper.appendChild(qrContainer);
-
-    new QRCode(qrContainer, {
-      text: qrString,
-      width: 128,
-      height: 128,
-      correctLevel: QRCode.CorrectLevel.M
-    });
-
-    const caption = document.createElement("div");
-    caption.className = "qr-text";
-    caption.textContent = qrString;
-    wrapper.appendChild(caption);
-
-    resultsDiv.appendChild(wrapper);
-    count++;
+        const qrContainer = document.createElement("div");
+        wrapper.appendChild(qrContainer);
+        new QRCode(qrContainer, {text: 'n123git.sayshi' + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
+        const caption = document.createElement("div");
+        caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption), resultsDiv.appendChild(wrapper);
+        count++;
+      }
+      $("notice").innerText = `Generating ${verString} QR Codes... (${count}/${amount})`;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+    $("notice").innerText = "";
   }
+  await generateChunked();
 }
+
+$('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
 </script>
 
 </body>
