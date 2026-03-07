@@ -370,14 +370,15 @@ level5.qr.analyseQRString = function(data) {
     valid = code === expected;
   } catch {}
   const type = pattern.slice(0, gen.typeLen);
+  const tbase10 = (""+parseInt(type, 36));
   const variation = pattern.slice(gen.typeLen);
-  const base10 = (""+parseInt(variation, 36));
+  const vbase10 = (""+parseInt(variation, 36));
 
   $("analysis").innerHTML = `
     <b>Version:</b> ${version}<br>
     <b>Checksum:</b> ${valid ? "Valid!" : "Invalid :/"}<br>
-    <b>Type:</b> ${type}<br>
-    <b>Variation:</b> ${variation} (${base10})<br>
+    <b>Type:</b> ${type} (${tbase10})<br>
+    <b>Variation:</b> ${variation} (${vbase10})<br>
     <b>URI:</b> ${uri}
   `;
 }
