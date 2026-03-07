@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>V1/V2 QR Generator</title>
+<title>QR Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
@@ -83,22 +83,48 @@
     border-radius: 0.4rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
+
+
+  select {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    width: auto;
+    max-width: 150px;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  select:hover, select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+    outline: none;
+  }
 </style>
 </head>
 <body>
 
-<h2>V1/V2 QR Generator</h2>
+<h2>QR Generator</h2>
 <div style="display:flex; gap:1rem; flex-wrap:wrap;">
   
   <div class="container-panel">
-    <label for="type">V1/V2 Type (2/3 chars)</label>
+    <label for="type">Type (2/3 chars)</label>
     <input id="type" maxlength="3" placeholder="Enter type e.g. ABC/12">
   
     <label for="amount">Number of QRs</label>
     <input id="amount" type="number" min="1" value="5">
 
-    <label for="ver">Generate V2 QRs<span style="width: 10px;"></span>
-      <input id="ver" type="checkbox" style="margin-left: 10px;" checked>
+    <label for="ver">QR Version<span style="width: 10px;"></span>
+      <select id="ver" style="margin-left: 10px;">
+        <option value="V2">V2</option>
+        <option value="V1">V1</option>
+        <option value="V3">V3</option>
+      </select>
     </label>
 
     <button id="genBtn">Generate</button>
@@ -230,13 +256,13 @@ level5.qr.QRGenerator = class {
   }
 }
 
-level5.qr.V2QRGenerator = class extends level5.qr.QRGenerator {
+level5.qr.V2QRGenerator = class extends level5.qr.QRGenerator { // used from Yo-kai Watch 2 to Yo-kai Watch Blasters 2
   get typeLen() { return 3; } // yes I added spaces so the braces line up - I dont usually use that style of code but this time it looked too good to resist
   get varLen()  { return 4; }
   get keys()    { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
 }
 
-level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
+level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator { // used in Yo-kai Watch 1 and 3DS Yo-kai Watch games mainly for yw1 compatibility
   get typeLen() { return 2; }
   get varLen()  { return 4; }
   /* this is so stupid - when I originally found V2 codes in the binary I didn't find V1 because these didn't look like keys to me - I tried everything different alphabets, layouts etc
@@ -245,28 +271,73 @@ level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
   get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
 } 
 
+level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator { // used in Yo-kai Watch Puni Puni
+  get typeLen() { return 2; }
+  get varLen()  { return 4; }
+  get keys()    { return ["A14+BDM71D", "QK35+NI8WV"]; }
+}
+
+level5.qr.V4QRGenerator = class extends level5.qr.QRGenerator { // used in Yo-kai Watch Land
+  get typeLen() { return 2; }
+  get varLen()  { return 4; }
+  get keys()    { return ["123+456789", "1234+12345"]; } // keys are UNKNOWN for V4 currently - I will dump this later
+}
+
 
 level5.qr.verProperties = {
-  32: {
+  "V1": {
     "name": "V1",
     "generator": new level5.qr.V1QRGenerator(),
     "typeLen": (new level5.qr.V1QRGenerator()).typeLen,
     "typeMax": parseInt("ZZ", 36),
     "varLen": (new level5.qr.V1QRGenerator()).varLen,    
-    "varMax": parseInt("ZZZZ", 36)
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
   },
-  33: {
+  "V2": {
     "name": "V2",
     "generator": new level5.qr.V2QRGenerator(),
     "typeLen": (new level5.qr.V2QRGenerator()).typeLen, 
     "typeMax": parseInt("ZZZ", 36),
     "varLen": (new level5.qr.V2QRGenerator()).varLen,
-    "varMax": parseInt("ZZZZ", 36)
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
+  },
+  "V3": {
+    "name": "V3",
+    "generator": new level5.qr.V3QRGenerator(),
+    "typeLen": (new level5.qr.V3QRGenerator()).typeLen, 
+    "typeMax": parseInt("ZZ", 36),
+    "varLen": (new level5.qr.V3QRGenerator()).varLen,
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
+  },
+  "V4": {
+    "name": "V4",
+    "generator": new level5.qr.V4QRGenerator(),
+    "typeLen": (new level5.qr.V4QRGenerator()).typeLen, 
+    "typeMax": parseInt("ZZ", 36),
+    "varLen": (new level5.qr.V4QRGenerator()).varLen,
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": true
   },
 }
 
+level5.qr.checkQRType = function(code) {
+  for (const key in level5.qr.verProperties) {
+    const gen = level5.qr.verProperties[key].generator;
+    const patternLen = gen.typeLen + gen.varLen;
+    const pattern = code.slice(0, patternLen);
+    try {
+      if (gen.gen(pattern) === code) return key;
+    } catch {}
+  }
+
+  return "Unknown";
+}
+
 level5.qr.ui.generate = async function() {
-  const ver = $("ver").checked ? 33 : 32;
+  const ver = $("ver").value;
   const type = $("type").value.trim().toUpperCase();
   const amount = parseInt($("amount").value, 10);
   const resultsDiv = $("results");
@@ -348,12 +419,10 @@ level5.qr.analyseQRString = function(data) {
   }
   const uri = data.split("/").slice(0, -1).join("/");
   const code = data.split("/").pop();
-  let version = "Unknown";
-  let gen;
   console.log(code.length);
-  version = level5.qr.verProperties[code.length]?.name ?? "Unknown";
-  gen = level5.qr.verProperties[code.length]?.generator;
-
+  let version = level5.qr.checkQRType(code);
+  if(version == "Unknown" && code.length == 33) version = "V4";
+  const gen = level5.qr.verProperties[version]?.generator;
   console.log(data);
   if (!gen) {
     $("analysis").innerHTML = "Unknown QR format.";
@@ -376,7 +445,7 @@ level5.qr.analyseQRString = function(data) {
 
   $("analysis").innerHTML = `
     <b>Version:</b> ${version}<br>
-    <b>Checksum:</b> ${valid ? "Valid!" : "Invalid :/"}<br>
+    <b>Checksum:</b> ${level5.qr.verProperties[version].unknownKeys ? `Currently unavailable for ${version}.` : (valid ? "Valid!" : "Invalid :/")}<br>
     <b>Type:</b> ${type} (${tbase10})<br>
     <b>Variation:</b> ${variation} (${vbase10})<br>
     <b>URI:</b> ${uri}
