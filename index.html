@@ -6,6 +6,7 @@
 <title>V1/V2 QR Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 <style>
   body {
     font-family: sans-serif;
@@ -69,24 +70,53 @@
     flex-direction: column; /* vertical stacking */
     gap: 1rem; /* again we need SOME spacing between stuff lol */
   }
+
+  .container-panel2 {
+    max-width: 300px; /* slightly larger than normal since URIs can be long */
+  }
+
+  #qrPreview {
+    margin-top: 10px;
+    width: 100%;
+    max-width: 220px;
+    align-self: center;
+    border-radius: 0.4rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
 </style>
 </head>
 <body>
 
 <h2>V1/V2 QR Generator</h2>
-<div class="container-panel">
-  <label for="type">V1/V2 Type (2/3 chars)</label>
-  <input id="type" maxlength="3" placeholder="Enter type e.g. ABC/12">
+<div style="display:flex; gap:1rem; flex-wrap:wrap;">
   
-  <label for="amount">Number of QRs</label>
-  <input id="amount" type="number" min="1" value="5">
+  <div class="container-panel">
+    <label for="type">V1/V2 Type (2/3 chars)</label>
+    <input id="type" maxlength="3" placeholder="Enter type e.g. ABC/12">
+  
+    <label for="amount">Number of QRs</label>
+    <input id="amount" type="number" min="1" value="5">
 
-  <label for="ver">Generate V2 QRs<span style="width: 10px;"></span>
-    <input id="ver" type="checkbox" style="margin-left: 10px;" checked>
-  </label>
+    <label for="ver">Generate V2 QRs<span style="width: 10px;"></span>
+      <input id="ver" type="checkbox" style="margin-left: 10px;" checked>
+    </label>
 
-  <button id="genBtn">Generate</button>
-  <footer id="notice"></footer>
+    <button id="genBtn">Generate</button>
+    <footer id="notice"></footer>
+  </div>
+
+  <div class="container-panel container-panel2">
+    <footer>QR Analyser: Paste a QR Code (Ctrl+V)</footer>
+
+    <div id="analysis">
+      <b>Type:</b> -<br>
+      <b>Checksum:</b> -<br>
+      <b>Code:</b> -<br>
+      <b>URI:</b> -<br>
+    </div>
+    <canvas id="qrPreview"></canvas>
+  </div>
+
 </div>
 
 <div id="results" class="results"></div>
@@ -95,7 +125,7 @@
 // all of the below code is a lib I made namespaced under level5.qr heres the description ig
 /* level5.qr
  * Description ig lol: Generates V1 & V2 QR Codes used by Level5 in the Yo-kai Watch series
- * Dependencies: CryptoJS, QRCode.js
+ * Dependencies: CryptoJS, QRCode.js, JSQR
  * Uhmm don't know what else to put
  * Exists: yes
  * oh yeah also:
@@ -114,8 +144,13 @@ if (typeof CryptoJS === "undefined") {
 }
 
 if (typeof QRCode === "undefined") {
-  alert("QRCode.js is not loaded! Please include qrcode.min.js in order for level5.qr to function.");
+  alert("QRCode.js is not loaded! Please include qrcode.js/qrcode.min.js in order for level5.qr to function.");
   throw new ReferenceError("QRCode.js is not loaded! Please include qrcode.min.js in order for level5.qr to function.");
+}
+
+if (typeof jsQR === "undefined") {
+  alert("jsQR is not loaded! Please include jsQR in order for level5.qr to function.");
+  throw new ReferenceError("jsQR is not loaded! Please include jsQR in order for level5.qr to function.");
 }
 
 level5.qr.QRGenerator = class {
@@ -210,14 +245,34 @@ level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
   get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
 } 
 
+
+level5.qr.verProperties = {
+  32: {
+    "name": "V1",
+    "generator": new level5.qr.V1QRGenerator(),
+    "typeLen": (new level5.qr.V1QRGenerator()).typeLen,
+    "typeMax": parseInt("ZZ", 36),
+    "varLen": (new level5.qr.V1QRGenerator()).varLen,    
+    "varMax": parseInt("ZZZZ", 36)
+  },
+  33: {
+    "name": "V2",
+    "generator": new level5.qr.V2QRGenerator(),
+    "typeLen": (new level5.qr.V2QRGenerator()).typeLen, 
+    "typeMax": parseInt("ZZZ", 36),
+    "varLen": (new level5.qr.V2QRGenerator()).varLen,
+    "varMax": parseInt("ZZZZ", 36)
+  },
+}
+
 level5.qr.ui.generate = async function() {
-  const ver = $("ver").checked;
+  const ver = $("ver").checked ? 33 : 32;
   const type = $("type").value.trim().toUpperCase();
   const amount = parseInt($("amount").value, 10);
   const resultsDiv = $("results");
   resultsDiv.innerHTML = "";
-  const gen = ver ? new level5.qr.V2QRGenerator() : new level5.qr.V1QRGenerator();
-  const verString = ver ? "V2" : "V1";
+  const gen = level5.qr.verProperties[ver].generator;
+  const verString = level5.qr.verProperties[ver].name;
   if (type.length !== gen.typeLen) {
     alert(`Type must be exactly ${gen.typeLen} characters for ${verString} QR Codes.`);
     return;
@@ -233,21 +288,25 @@ level5.qr.ui.generate = async function() {
   async function generateChunked() {
     const chunkSize = 10;
     while (count < amount) {
-      for (let i = 0; i < chunkSize && count < amount; i++) {
-        const { value, done } = variations.next();
-        if (done) break;
-        const qrString = "/" + gen.gen(type + value); // the forwardslash is required for them to be scannable - level5 places HTTP websites behind them but anything works aslong as there is a leading slash
-        const wrapper = document.createElement("div");
-        wrapper.className = "qr-item";
-
-        const qrContainer = document.createElement("div");
-        wrapper.appendChild(qrContainer);
-        new QRCode(qrContainer, {text: 'n123git.sayshi' + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
-        const caption = document.createElement("div");
-        caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption), resultsDiv.appendChild(wrapper);
-        count++;
-      }
       $("notice").innerText = `Generating ${verString} QR Codes... (${count}/${amount})`;
+      try {
+        let max = level5.qr.verProperties[ver].varMax;
+        if(amount > max) throw new ReferenceError(`Cannot generate > ${max} variations per QR Code type.`);
+        for (let i = 0; i < chunkSize && count < amount; i++) {
+          const { value, done } = variations.next();
+          if (done) break;
+          const qrString = "/" + gen.gen(type + value); // the forwardslash is required for them to be scannable - level5 places HTTP websites behind them but anything works aslong as there is a leading slash
+          const wrapper = document.createElement("div");
+          wrapper.className = "qr-item";
+
+          const qrContainer = document.createElement("div");
+          wrapper.appendChild(qrContainer);
+          new QRCode(qrContainer, {text: 'n123git.sayshi' + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
+          const caption = document.createElement("div");
+          caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption), resultsDiv.appendChild(wrapper);
+          count++;
+        }
+      } catch(error) {$("notice").innerText = error}
       await new Promise(resolve => requestAnimationFrame(resolve));
     }
     $("notice").innerText = "";
@@ -256,6 +315,72 @@ level5.qr.ui.generate = async function() {
 }
 
 $('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
+
+document.addEventListener("paste", async (event) => {
+ const items = event.clipboardData.items;
+ for (const item of items) if (item.type.startsWith("image")) level5.qr.decodeQR(await createImageBitmap(item.getAsFile()));
+});
+
+level5.qr.decodeQR = async function(bitmap) {
+  const canvas = $("qrPreview");
+  const ctx = canvas.getContext("2d");
+  const maxSize = 128;
+  const scale = Math.min(maxSize / bitmap.width, maxSize / bitmap.height, 1);
+
+  canvas.width = bitmap.width * scale, canvas.height = bitmap.height * scale;
+  ctx.clearRect(0, 0, canvas.width,canvas.height);
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const code = jsQR(imgData.data, canvas.width, canvas.height);
+  if (!code) {
+    $("analysis").innerHTML = "No QR code detected.";
+    return;
+  }
+
+  level5.qr.analyseQRString(code.data);
+}
+
+level5.qr.analyseQRString = function(data) {
+  if (!data.includes("/")) {
+    $("analysis").innerHTML = "Invalid QR format.";
+    return;
+  }
+  const uri = data.split("/").slice(0, -1).join("/");
+  const code = data.split("/").pop();
+  let version = "Unknown";
+  let gen;
+  console.log(code.length);
+  version = level5.qr.verProperties[code.length]?.name ?? "Unknown";
+  gen = level5.qr.verProperties[code.length]?.generator;
+
+  console.log(data);
+  if (!gen) {
+    $("analysis").innerHTML = "Unknown QR format.";
+    return;
+  }
+
+  const patternLen = gen.typeLen + gen.varLen;
+  const pattern = code.slice(0, patternLen);
+  const checksum = code.slice(patternLen);
+  let valid = false;
+
+  try {
+    const expected = gen.gen(pattern)
+    valid = code === expected;
+  } catch {}
+  const type = pattern.slice(0, gen.typeLen);
+  const variation = pattern.slice(gen.typeLen);
+  const base10 = (""+parseInt(variation, 36));
+
+  $("analysis").innerHTML = `
+    <b>Version:</b> ${version}<br>
+    <b>Checksum:</b> ${valid ? "Valid!" : "Invalid :/"}<br>
+    <b>Type:</b> ${type}<br>
+    <b>Variation:</b> ${variation} (${base10})<br>
+    <b>URI:</b> ${uri}
+  `;
+}
 </script>
 
 </body>
