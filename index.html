@@ -273,6 +273,12 @@ level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
    * Level5 - what are you on :p */
   get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
 } 
+  
+level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator { 
+  get typeLen() { return 2; }
+  get varLen()  { return 4; }
+  get keys()    { return ["A14+BDM71D", "QK35+NI8WV"]; }
+}
 
 level5.qr.V2PGenerator = class extends level5.qr.V2QRGenerator  {
   get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
@@ -280,12 +286,6 @@ level5.qr.V2PGenerator = class extends level5.qr.V2QRGenerator  {
   
 level5.qr.V3PGenerator = class extends level5.qr.V3QRGenerator  {
   get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
-}
-  
-level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator { 
-  get typeLen() { return 2; }
-  get varLen()  { return 4; }
-  get keys()    { return ["A14+BDM71D", "QK35+NI8WV"]; }
 }
 
 level5.qr.V4QRGenerator = class extends level5.qr.QRGenerator { 
