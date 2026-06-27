@@ -123,6 +123,8 @@
       <select id="ver" style="margin-left: 10px;">
         <option value="V2">V2</option>
         <option value="V1">V1</option>
+        <option value="V2P">V2 (Puni)</option>
+        <option value="V1P">V1 (Puni)</option>
         <option value="V3">V3</option>
       </select>
     </label>
@@ -183,9 +185,10 @@ level5.qr.QRGenerator = class {
   static TABLE1 = 'GN5BH8QJSAC0MFR6P4VET1O7K9U2LD3I';
   static TABLE2 = '0123456789abcdefghijklmnopqrstuv';
   static chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  get typeLen() { throw new ReferenceError('typeLen, use the subclasses '); }
+  get typeLen() { throw new ReferenceError('typeLen, use the subclasses'); }
   get varLen()  { throw new ReferenceError('varLen, use the subclasses'); }
   get keys()    { throw new ReferenceError('keys, use the subclasses'); }
+  get url()     { return 'n123git.sayshi'; } // aside from the puni variants, all thats required is a leading / and the contents after
 
   static* variationGenerator() { 
     const base = level5.qr.QRGenerator.chars.length;
@@ -220,7 +223,7 @@ level5.qr.QRGenerator = class {
 
     const out = [];
     let bitPos = 0, bufPos = 0; 
-   const OUT_BIT = 5, IN_BIT = 4; // 4-bit input values -> 5-bit output values
+    const OUT_BIT = 5, IN_BIT = 4; // 4-bit input values -> 5-bit output values
 
     while (bufPos < inBuf.length) {
       let a = inBuf[bufPos] << (32 - IN_BIT); 
@@ -259,11 +262,11 @@ level5.qr.QRGenerator = class {
 level5.qr.V2QRGenerator = class extends level5.qr.QRGenerator { 
  get typeLen() { return 3; } 
  get varLen()  { return 4; }
-  get keys()    { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
+ get keys()    { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
 }
 
 level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator { 
- get typeLen() { return 2; }
+  get typeLen() { return 2; }
   get varLen()  { return 4; }
   /* this is so stupid - when I originally found V2 codes in the binary I didn't find V1 because these didn't look like keys to me - I tried everything different alphabets, layouts etc
    * months later I came back to this and realised it - the issue here is V2 keys are secure, high entropy ASCII - these are literally random bs a level5 dev wrote which you could easily guess - it's like making your password "password" lmfao
@@ -271,18 +274,25 @@ level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator {
   get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
 } 
 
+level5.qr.V2PGenerator = class extends level5.qr.V2QRGenerator  {
+  get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
+}
+  
+level5.qr.V1PGenerator = class extends level5.qr.V1QRGenerator  {
+  get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
+}
+  
 level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator { 
- get typeLen() { return 2; }
+  get typeLen() { return 2; }
   get varLen()  { return 4; }
   get keys()    { return ["A14+BDM71D", "QK35+NI8WV"]; }
 }
 
 level5.qr.V4QRGenerator = class extends level5.qr.QRGenerator { 
- get typeLen() { return 2; }
+  get typeLen() { return 2; }
   get varLen()  { return 4; }
   get keys()    { return ["123+456789", "1234+12345"]; } // keys are UNKNOWN for V4 currently - I will dump this later
 }
-
 
 level5.qr.verProperties = {
   "V1": {
@@ -300,6 +310,24 @@ level5.qr.verProperties = {
     "typeLen": (new level5.qr.V2QRGenerator()).typeLen, 
     "typeMax": parseInt("ZZZ", 36),
     "varLen": (new level5.qr.V2QRGenerator()).varLen,
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
+  },
+  "V1P": {
+    "name": "V1 (Puni)",
+    "generator": new level5.qr.V1PQRGenerator(),
+    "typeLen": (new level5.qr.V1PQRGenerator()).typeLen,
+    "typeMax": parseInt("ZZ", 36),
+    "varLen": (new level5.qr.V1PQRGenerator()).varLen,    
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
+  },
+  "V2P": {
+    "name": "V2 (Puni)",
+    "generator": new level5.qr.V2PQRGenerator(),
+    "typeLen": (new level5.qr.V2PQRGenerator()).typeLen, 
+    "typeMax": parseInt("ZZZ", 36),
+    "varLen": (new level5.qr.V2PQRGenerator()).varLen,
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
@@ -367,12 +395,12 @@ level5.qr.ui.generate = async function() {
           const { value, done } = variations.next();
           if (done) break;
           const qrString = "/" + gen.gen(type + value); 
-         const wrapper = document.createElement("div");
+          const wrapper = document.createElement("div");
           wrapper.className = "qr-item";
 
           const qrContainer = document.createElement("div");
           wrapper.appendChild(qrContainer);
-          new QRCode(qrContainer, {text: 'n123git.sayshi' + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
+          new QRCode(qrContainer, {text: gen.url + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
           const caption = document.createElement("div");
           caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption), resultsDiv.appendChild(wrapper);
           count++;
