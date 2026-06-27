@@ -124,7 +124,7 @@
         <option value="V2">V2</option>
         <option value="V1">V1</option>
         <option value="V2P">V2 (Puni)</option>
-        <option value="V1P">V1 (Puni)</option>
+        <option value="V3P">V3 (Puni)</option>
         <option value="V3">V3</option>
       </select>
     </label>
@@ -278,7 +278,7 @@ level5.qr.V2PGenerator = class extends level5.qr.V2QRGenerator  {
   get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
 }
   
-level5.qr.V1PGenerator = class extends level5.qr.V1QRGenerator  {
+level5.qr.V3PGenerator = class extends level5.qr.V3QRGenerator  {
   get url() { return 'http://yw.b-boys.jp'; } // puni variants require this URI
 }
   
@@ -313,12 +313,12 @@ level5.qr.verProperties = {
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
-  "V1P": {
-    "name": "V1 (Puni)",
-    "generator": new level5.qr.V1PQRGenerator(),
-    "typeLen": (new level5.qr.V1PQRGenerator()).typeLen,
+  "V3P": {
+    "name": "V3 (Puni)",
+    "generator": new level5.qr.V3PQRGenerator(),
+    "typeLen": (new level5.qr.V3PQRGenerator()).typeLen,
     "typeMax": parseInt("ZZ", 36),
-    "varLen": (new level5.qr.V1PQRGenerator()).varLen,    
+    "varLen": (new level5.qr.V3PQRGenerator()).varLen,    
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
