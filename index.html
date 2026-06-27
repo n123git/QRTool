@@ -313,6 +313,15 @@ level5.qr.verProperties = {
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
+  "V3": {
+    "name": "V3",
+    "generator": new level5.qr.V3QRGenerator(),
+    "typeLen": (new level5.qr.V3QRGenerator()).typeLen, 
+    "typeMax": parseInt("ZZ", 36),
+    "varLen": (new level5.qr.V3QRGenerator()).varLen,
+    "varMax": parseInt("ZZZZ", 36),
+    "unknownKeys": false
+  },
   "V3P": {
     "name": "V3 (Puni)",
     "generator": new level5.qr.V3PQRGenerator(),
@@ -328,15 +337,6 @@ level5.qr.verProperties = {
     "typeLen": (new level5.qr.V2PQRGenerator()).typeLen, 
     "typeMax": parseInt("ZZZ", 36),
     "varLen": (new level5.qr.V2PQRGenerator()).varLen,
-    "varMax": parseInt("ZZZZ", 36),
-    "unknownKeys": false
-  },
-  "V3": {
-    "name": "V3",
-    "generator": new level5.qr.V3QRGenerator(),
-    "typeLen": (new level5.qr.V3QRGenerator()).typeLen, 
-    "typeMax": parseInt("ZZ", 36),
-    "varLen": (new level5.qr.V3QRGenerator()).varLen,
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
@@ -368,6 +368,7 @@ level5.qr.ui.generate = async function() {
   const ver = $("ver").value;
   const type = $("type").value.trim().toUpperCase();
   const amount = parseInt($("amount").value, 10);
+  const randomMode = $("shuffleCheck").checked;
   const resultsDiv = $("results");
   resultsDiv.innerHTML = "";
   const gen = level5.qr.verProperties[ver].generator;
@@ -377,24 +378,28 @@ level5.qr.ui.generate = async function() {
     return;
   }
   if (amount < 1) {
-    alert("Amount must be >= 1 - you can't expect my code to generate 0 or even negative QR Codes :3");
+    if(amount !== 0) alert("Amount must be >= 1 - you can't expect my code to generate 0 or even negative QR Codes :3");
     return;
   }
 
-  const variations = level5.qr.QRGenerator.variationGenerator();
+  let max = level5.qr.verProperties[ver].varMax;
+  if (amount > max && !randomMode) throw new ReferenceError(`Cannot generate > ${max} variations per QR Code type.`);
+
+  const base = level5.qr.QRGenerator.chars.length;
   let count = 0;
   $("notice").innerText = `Generating ${amount} ${verString} QR Codes...`;
+
   async function generateChunked() {
     const chunkSize = 10;
     while (count < amount) {
       $("notice").innerText = `Generating ${verString} QR Codes... (${count}/${amount})`;
       try {
-        let max = level5.qr.verProperties[ver].varMax;
-        if(amount > max) throw new ReferenceError(`Cannot generate > ${max} variations per QR Code type.`);
         for (let i = 0; i < chunkSize && count < amount; i++) {
-          const { value, done } = variations.next();
-          if (done) break;
-          const qrString = "/" + gen.gen(type + value); 
+          let varStr;
+          if (randomMode) varStr = Math.floor(Math.random() * (max + 1)).toString(base).toUpperCase().padStart(4, "0");
+          else varStr = count.toString(base).toUpperCase().padStart(4, "0");
+          
+          const qrString = "/" + gen.gen(type + varStr);
           const wrapper = document.createElement("div");
           wrapper.className = "qr-item";
 
@@ -412,6 +417,8 @@ level5.qr.ui.generate = async function() {
   }
   await generateChunked();
 }
+
+ $('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
 
 $('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
 
@@ -447,15 +454,19 @@ level5.qr.analyseQRString = function(data) {
   }
   const uri = data.split("/").slice(0, -1).join("/");
   const code = data.split("/").pop();
-  console.log(code.length);
   let version = level5.qr.checkQRType(code);
-  if(version == "Unknown" && code.length == 33) version = "V4";
+  if (version == "Unknown" && code.length == 33) version = "V4";
   const gen = level5.qr.verProperties[version]?.generator;
-  console.log(data);
   if (!gen) {
     $("analysis").innerHTML = "Unknown QR format.";
     return;
   }
+
+  let displayVersion;
+  // i could defo make this more modular and all but this is just a quick patch
+  if ((version === "V2" || version === "V3") && uri === "http://yw.b-boys.p") displayVersion = version + " (3DS/Puni)";
+  else if (version === "V2" || version === "V3") displayVersion = version + " (3DS)";
+  else displayVersion = level5.qr.verProperties[version]?.name || version;
 
   const patternLen = gen.typeLen + gen.varLen;
   const pattern = code.slice(0, patternLen);
@@ -472,7 +483,7 @@ level5.qr.analyseQRString = function(data) {
   const vbase10 = (""+parseInt(variation, 36));
 
   $("analysis").innerHTML = `
-    <b>Version:</b> ${version}<br>
+    <b>Version:</b> ${displayVersion}<br>
     <b>Checksum:</b> ${level5.qr.verProperties[version].unknownKeys ? `Currently unavailable for ${version}.` : (valid ? "Valid!" : "Invalid :/")}<br>
     <b>Type:</b> ${type} (${tbase10})<br>
     <b>Variation:</b> ${variation} (${vbase10})<br>
