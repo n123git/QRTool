@@ -16,7 +16,6 @@
   }
 
   label { font-weight: bold; display: block; margin-bottom: 0.3rem; }
-
   input, button {
     font-size: 1rem;
     padding: 0.5rem;
@@ -25,11 +24,10 @@
   }
 
   button {
-    background: #007bff; color: white; border: none;
+    background: oklch(60% 0.2 255); color: white; border: none;
     border-radius: 0.5rem;
     font-weight: bold;
   }
-
   .results {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -41,10 +39,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: #f8f8f8;
+    background: hsl(0, 0%, 97%);
     padding: 0.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   .qr-text {
@@ -63,18 +61,16 @@
     max-width: 250px; 
     width: auto;
     padding: 1rem; 
-    border: 1px solid #ccc;
+    border: 1px solid #CCC;
     border-radius: 0.5rem;
-    background: #f9f9f9;
+    background: hsl(0, 0%, 98%);
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
 
-  .container-panel2 {
-    max-width: 300px; 
-  }
-
+  .container-panel2 { max-width: 300px; }
+  .dl-btn { margin-top: 0.4rem; padding: 0.3rem; font-size: 0.8rem; }
   #qrPreview {
     margin-top: 10px;
     width: 100%;
@@ -83,7 +79,6 @@
     border-radius: 0.4rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
-
 
   select {
     font-size: 1rem;
@@ -101,8 +96,8 @@
   }
 
   select:hover, select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+    border-color: oklch(60% 0.2 255);
+    box-shadow: 0 0 0 2px oklch(60% 0.2 255 / 0.2);
     outline: none;
   }
 </style>
@@ -119,6 +114,9 @@
     <label for="amount">Number of QRs</label>
     <input id="amount" type="number" min="1" value="5">
 
+    <label for="variation">Variation (optional, up to 4 chars)</label>
+    <input id="variation" maxlength="4" placeholder="Blank = start at 0000">
+
     <label for="ver">QR Version<span style="width: 10px;"></span>
       <select id="ver" style="margin-left: 10px;">
         <option value="V2">V2 (3DS)</option>
@@ -134,6 +132,7 @@
     </label>
 
     <button id="genBtn">Generate</button>
+    <button id="dlAllBtn" hidden>Download all (PNG)</button>
     <footer id="notice"></footer>
   </div>
 
@@ -190,9 +189,9 @@ level5.qr.QRGenerator = class {
   static TABLE2 = '0123456789abcdefghijklmnopqrstuv';
   static chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   get typeLen() { throw new ReferenceError('typeLen, use the subclasses'); }
-  get varLen()  { throw new ReferenceError('varLen, use the subclasses'); }
-  get keys()    { throw new ReferenceError('keys, use the subclasses'); }
-  get url()     { return 'n123git.sayshi'; } // aside from the puni variants, all thats required is a leading / and the contents after
+  get varLen() { throw new ReferenceError('varLen, use the subclasses'); }
+  get keys() { throw new ReferenceError('keys, use the subclasses'); }
+  get url() { return 'n123git.sayshi'; } // aside from the puni variants, all thats required is a leading / and the contents after
 
   static* variationGenerator() { 
     const base = level5.qr.QRGenerator.chars.length;
@@ -231,14 +230,14 @@ level5.qr.QRGenerator = class {
 
     while (bufPos < inBuf.length) {
       let a = inBuf[bufPos] << (32 - IN_BIT); 
-     if (bufPos + 1 < inBuf.length) a |= inBuf[bufPos + 1] << (32 - 2 * IN_BIT);  
-     a >>>= (32 - OUT_BIT - bitPos); 
-     a &= (1 << OUT_BIT) - 1; 
-     if (bufPos + 1 >= inBuf.length) a >>>= 2; 
-     out.push(level5.qr.QRGenerator.TABLE1[a]); 
-     bitPos += OUT_BIT; 
-     while (bitPos >= IN_BIT) bitPos -= IN_BIT, bufPos++; 
-   }
+      if (bufPos + 1 < inBuf.length) a |= inBuf[bufPos + 1] << (32 - 2 * IN_BIT);  
+      a >>>= (32 - OUT_BIT - bitPos); 
+      a &= (1 << OUT_BIT) - 1; 
+      if (bufPos + 1 >= inBuf.length) a >>>= 2; 
+      out.push(level5.qr.QRGenerator.TABLE1[a]); 
+      bitPos += OUT_BIT; 
+      while (bitPos >= IN_BIT) bitPos -= IN_BIT, bufPos++; 
+    }
     return out.join(''); 
  }
 
@@ -265,23 +264,23 @@ level5.qr.QRGenerator = class {
 
 level5.qr.V2QRGenerator = class extends level5.qr.QRGenerator { 
  get typeLen() { return 3; } 
- get varLen()  { return 4; }
- get keys()    { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
+ get varLen() { return 4; }
+ get keys() { return ['OYD78+MIP3', 'N+Q09V7LI5']; }
 }
 
 level5.qr.V1QRGenerator = class extends level5.qr.QRGenerator { 
   get typeLen() { return 2; }
-  get varLen()  { return 4; }
+  get varLen() { return 4; }
   /* this is so stupid - when I originally found V2 codes in the binary I didn't find V1 because these didn't look like keys to me - I tried everything different alphabets, layouts etc
    * months later I came back to this and realised it - the issue here is V2 keys are secure, high entropy ASCII - these are literally random bs a level5 dev wrote which you could easily guess - it's like making your password "password" lmfao
    * Level5 - what are you on :p */
-  get keys()    { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
+  get keys() { return ["US_1st:K3Y+Value", "US_2nd:K3Y+Value"]; } 
 } 
   
 level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator { 
   get typeLen() { return 2; }
-  get varLen()  { return 4; }
-  get keys()    { return ["A14+BDM71D", "QK35+NI8WV"]; }
+  get varLen() { return 4; }
+  get keys() { return ["A14+BDM71D", "QK35+NI8WV"]; }
 }
 
 level5.qr.V2PQRGenerator = class extends level5.qr.V2QRGenerator  {
@@ -294,8 +293,8 @@ level5.qr.V3PQRGenerator = class extends level5.qr.V3QRGenerator  {
 
 level5.qr.V4QRGenerator = class extends level5.qr.QRGenerator { 
   get typeLen() { return 2; }
-  get varLen()  { return 4; }
-  get keys()    { return ["123+456789", "1234+12345"]; } // keys are UNKNOWN for V4 currently - I will dump this later
+  get varLen() { return 4; }
+  get keys() { return ["123+456789", "1234+12345"]; } // keys are UNKNOWN for V4 currently - I will dump this later
 }
 
 level5.qr.verProperties = {
@@ -372,7 +371,9 @@ level5.qr.ui.generate = async function() {
   const ver = $("ver").value;
   const type = $("type").value.trim().toUpperCase();
   const amount = parseInt($("amount").value, 10);
-  const randomMode = $("shuffleCheck").checked;
+  const varInput = $("variation").value.trim().toUpperCase();
+  const randomMode = $("shuffleCheck").checked && !varInput; // an explicit variation wins over random
+  $("dlAllBtn").hidden = true;
   const resultsDiv = $("results");
   resultsDiv.innerHTML = "";
   const gen = level5.qr.verProperties[ver].generator;
@@ -386,8 +387,17 @@ level5.qr.ui.generate = async function() {
     return;
   }
 
+  if (varInput && (!/^[0-9A-Z]+$/.test(varInput) || varInput.length > gen.varLen)) {
+    alert(`Variation must be up to ${gen.varLen} characters (0-9, A-Z).`);
+    return;
+  }
+  const start = varInput ? parseInt(varInput, 36) : 0;
+
   let max = level5.qr.verProperties[ver].varMax;
-  if (amount > max && !randomMode) throw new ReferenceError(`Cannot generate > ${max} variations per QR Code type.`);
+  if (start + amount - 1 > max && !randomMode) {
+    alert(`Variations only go up to ${"Z".repeat(gen.varLen)}; starting at ${start.toString(36).toUpperCase().padStart(gen.varLen, "0")} you can generate at most ${max - start + 1}.`);
+    return;
+  }
 
   const base = level5.qr.QRGenerator.chars.length;
   let count = 0;
@@ -401,7 +411,7 @@ level5.qr.ui.generate = async function() {
         for (let i = 0; i < chunkSize && count < amount; i++) {
           let varStr;
           if (randomMode) varStr = Math.floor(Math.random() * (max + 1)).toString(base).toUpperCase().padStart(4, "0");
-          else varStr = count.toString(base).toUpperCase().padStart(4, "0");
+          else varStr = (start + count).toString(base).toUpperCase().padStart(4, "0");
           
           const qrString = "/" + gen.gen(type + varStr);
           const wrapper = document.createElement("div");
@@ -411,20 +421,60 @@ level5.qr.ui.generate = async function() {
           wrapper.appendChild(qrContainer);
           new QRCode(qrContainer, {text: gen.url + qrString, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M});
           const caption = document.createElement("div");
-          caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption), resultsDiv.appendChild(wrapper);
+          caption.className = "qr-text", caption.textContent = qrString, wrapper.appendChild(caption);
+
+          const dl = document.createElement("button");
+          dl.className = "dl-btn", dl.textContent = "Download PNG";
+          dl.onclick = () => level5.qr.ui.download(gen.url + qrString, qrString.slice(1));
+          wrapper.appendChild(dl), resultsDiv.appendChild(wrapper);
           count++;
         }
-      } catch(error) {$("notice").innerText = error}
+      } catch(error) { $("notice").innerText = error; return; }
       await new Promise(resolve => requestAnimationFrame(resolve));
     }
     $("notice").innerText = "";
+    $("dlAllBtn").hidden = false;
   }
   await generateChunked();
 }
 
- $('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
+// 4:3 :p
+level5.qr.ui.EMU = { w: 640, h: 480, qr: 150 };
+level5.qr.ui.renderEmu = function(text) {
+  const { w, h, qr: target } = level5.qr.ui.EMU;
+  const matrix = new QRCode(document.createElement("div"), { text, width: 1, height: 1, correctLevel: QRCode.CorrectLevel.M })._oQRCode;
+  const count = matrix.getModuleCount();
+  const px = Math.max(1, Math.floor(target / count));
+  const x0 = Math.floor((w - px * count) / 2), y0 = Math.floor((h - px * count) / 2);
+
+  const out = document.createElement("canvas");
+  out.width = w, out.height = h;
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#000";
+  for (let r = 0; r < count; r++)
+    for (let c = 0; c < count; c++)
+      if (matrix.isDark(r, c)) ctx.fillRect(x0 + c * px, y0 + r * px, px, px);
+  return out;
+}
+
+level5.qr.ui.download = function(text, name) {
+  const a = document.createElement("a");
+  a.href = level5.qr.ui.renderEmu(text).toDataURL("image/png");
+  a.download = `${name}.png`;
+  a.click();
+}
+
+level5.qr.ui.downloadAll = async function() {
+  for (const btn of document.querySelectorAll("#results .dl-btn")) {
+    btn.click();
+    await new Promise(r => setTimeout(r, 250)); // browsers dont like it when you chain your downloads without a gap, because it's 'spam', what next you can't download a virus /j :/
+  }
+}
 
 $('genBtn')?.addEventListener("click", async () => await level5.qr.ui.generate());
+$('dlAllBtn')?.addEventListener("click", () => level5.qr.ui.downloadAll());
 
 document.addEventListener("paste", async (event) => {
  const items = event.clipboardData.items;
@@ -468,7 +518,7 @@ level5.qr.analyseQRString = function(data) {
 
   let displayVersion;
   // i could defo make this more modular and all but this is just a quick patch
-  if ((version === "V2" || version === "V3") && uri === "http://yw.b-boys.p") displayVersion = version + " (3DS/Puni)";
+  if ((version === "V2" || version === "V3") && uri === "http://yw.b-boys.jp") displayVersion = version + " (3DS/Puni)";
   else if (version === "V2" || version === "V3") displayVersion = version + " (3DS)";
   else displayVersion = level5.qr.verProperties[version]?.name || version;
 
