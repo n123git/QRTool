@@ -121,8 +121,8 @@
       <select id="ver" style="margin-left: 10px;">
         <option value="V2">V2 (3DS)</option>
         <option value="V1">V1 (3DS)</option>
-        <option value="V2B">V2 (Bandai)</option>
-        <option value="V1B">V1 (Bandai)</option>
+        <option value="V2H">V2 (Hasbro)</option>
+        <option value="V1H">V1 (Hasbro)</option>
         <option value="V2P">V2 (Puni)</option>
         <option value="V3P">V3 (Puni)</option>
         <option value="V3">V3 (3DS)</option>
@@ -285,12 +285,12 @@ level5.qr.V3QRGenerator = class extends level5.qr.QRGenerator {
   get keys() { return ["A14+BDM71D", "QK35+NI8WV"]; }
 }
 
-level5.qr.V1BQRGenerator = class extends level5.qr.V1QRGenerator {
-  get url() { return 'HTTP://WWW.HASBRO.COM/YW'; } // bandai variants require this URI
+level5.qr.V1HQRGenerator = class extends level5.qr.V1QRGenerator {
+  get url() { return 'HTTP://WWW.HASBRO.COM/YW'; } // hasbro variants require this URI
 }
 
-level5.qr.V2BQRGenerator = class extends level5.qr.V2QRGenerator {
-  get url() { return 'HTTP://WWW.HASBRO.COM/YW'; } // bandai variants require this URI
+level5.qr.V2HQRGenerator = class extends level5.qr.V2QRGenerator {
+  get url() { return 'HTTP://WWW.HASBRO.COM/YW'; } // hasbro variants require this URI
 }
 
 level5.qr.V2PQRGenerator = class extends level5.qr.V2QRGenerator  {
@@ -353,21 +353,21 @@ level5.qr.verProperties = {
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
-  "V1B": {
-    "name": "V1 (Bandai)",
-    "generator": new level5.qr.V1BQRGenerator(),
-    "typeLen": (new level5.qr.V1BQRGenerator()).typeLen,
+  "V1H": {
+    "name": "V1 (Hasbro)",
+    "generator": new level5.qr.V1HQRGenerator(),
+    "typeLen": (new level5.qr.V1HQRGenerator()).typeLen,
     "typeMax": parseInt("ZZ", 36),
-    "varLen": (new level5.qr.V1BQRGenerator()).varLen,
+    "varLen": (new level5.qr.V1HQRGenerator()).varLen,
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
-  "V2B": {
-    "name": "V2 (Bandai)",
-    "generator": new level5.qr.V2BQRGenerator(),
-    "typeLen": (new level5.qr.V2BQRGenerator()).typeLen,
+  "V2H": {
+    "name": "V2 (Hasbro)",
+    "generator": new level5.qr.V2HQRGenerator(),
+    "typeLen": (new level5.qr.V2HQRGenerator()).typeLen,
     "typeMax": parseInt("ZZZ", 36),
-    "varLen": (new level5.qr.V2BQRGenerator()).varLen,
+    "varLen": (new level5.qr.V2HQRGenerator()).varLen,
     "varMax": parseInt("ZZZZ", 36),
     "unknownKeys": false
   },
@@ -546,7 +546,7 @@ level5.qr.analyseQRString = function(data) {
 
   let displayVersion;
   // i could defo make this more modular and all but this is just a quick patch
-  if ((version === "V1" || version === "V2") && uri.toUpperCase() === "HTTP://WWW.HASBRO.COM/YW") displayVersion = version + " (Bandai)";
+  if ((version === "V1" || version === "V2") && uri.toUpperCase() === "HTTP://WWW.HASBRO.COM/YW") displayVersion = version + " (Hasbro)";
   else if ((version === "V2" || version === "V3") && uri === "http://yw.b-boys.jp") displayVersion = version + " (3DS/Puni)";
   else if (version === "V2" || version === "V3") displayVersion = version + " (3DS)";
   else displayVersion = level5.qr.verProperties[version]?.name || version;
