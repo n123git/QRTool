@@ -114,7 +114,7 @@
     <label for="amount">Number of QRs</label>
     <input id="amount" type="number" min="1" value="5">
 
-    <label for="variation">Variation (optional, up to 4 chars)</label>
+    <label for="variation">Variation (optional!)</label>
     <input id="variation" maxlength="4" placeholder="Blank = start at 0000">
 
     <label for="ver">QR Version<span style="width: 10px;"></span>
@@ -535,7 +535,6 @@ level5.qr.analyseQRString = function(data) {
   const tbase10 = (""+parseInt(type, 36));
   const variation = pattern.slice(gen.typeLen);
   const vbase10 = (""+parseInt(variation, 36));
-
   $("analysis").innerHTML = `
     <b>Version:</b> ${displayVersion}<br>
     <b>Checksum:</b> ${level5.qr.verProperties[version].unknownKeys ? `Currently unavailable for ${version}.` : (valid ? "Valid!" : "Invalid :/")}<br>
